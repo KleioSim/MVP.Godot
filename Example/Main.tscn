@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://do3t7fwoodxwj"]
+
+[ext_resource type="PackedScene" uid="uid://dbkfx50cqj15" path="res://addons/mvp.godot/Example/Demon.tscn" id="1_3ksfy"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Control" parent="." instance=ExtResource("1_3ksfy")]
+layout_mode = 1
