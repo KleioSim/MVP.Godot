@@ -40,3 +40,14 @@ public abstract class Present<TView, IModel> : IPresent
         signalBindings.Add(new SignalBinding((obj)=>contrlGetter((TView)obj), SignalName,(Context obj1, object obj2)=> action(obj1, (IModel)obj2)));
     }
 }
+
+[AttributeUsage(AttributeTargets.Class)]
+public class MockModelAttribute : Attribute
+{
+    public Type ViewType { get; }
+
+    public MockModelAttribute(Type type)
+    {
+        ViewType = type;
+    }
+}
