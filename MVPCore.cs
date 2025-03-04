@@ -10,7 +10,7 @@ internal class MVPCore
 {
     private static readonly Dictionary<Type, IPresent> view2Present = new();
     private static readonly Dictionary<IView, Combine> view2combines = new();
-    private static readonly Dictionary<Type, object>  viewType2Mock= new();
+    private static readonly Dictionary<Type, object>  present2Mock= new();
 
     private static object model;
 
@@ -34,7 +34,12 @@ internal class MVPCore
             if (IsMock(type))
             {
                 var mockAttrib = type.GetCustomAttribute<MockModelAttribute>();
-                viewType2Mock.Add(mockAttrib.ViewType, Activator.CreateInstance(type));
+
+                var modelInterface = mockAttrib.PresentType.BaseType.GetGenericArguments()[1];
+
+                var decoratorMethod = typeof(Decorator).GetMethod("Create").MakeGenericMethod(modelInterface);
+
+                present2Mock.Add(mockAttrib.PresentType, decoratorMethod.Invoke(null, new object[] { Activator.CreateInstance(type) }));
                 continue;
             }
         }
@@ -79,7 +84,7 @@ internal class MVPCore
             var control = binding.controlGetter.Invoke(view) as Control ?? throw new System.Exception();
             var signal = binding.SignalName as StringName ?? throw new System.Exception();
 
-            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(combine.context, model ?? viewType2Mock.GetValueOrDefault(combine.view.GetType()))));
+            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(combine.context, model ?? present2Mock.GetValueOrDefault(combine.present.GetType()))));
         }
     }
 
@@ -92,15 +97,17 @@ internal class MVPCore
     {
         foreach (var combine in view2combines.Values)
         {
-            var currModel = model ?? viewType2Mock.GetValueOrDefault(combine.view.GetType());
-
-            if (combine.IsDirty)
+            if (!combine.IsDirty)
             {
-                combine.IsDirty = false;
-                foreach (var binding in combine.present.UpdateBinding)
-                {
-                    binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(combine.context, currModel));
-                }
+                continue;
+            }
+
+            var currModel = model ?? present2Mock.GetValueOrDefault(combine.present.GetType());
+
+            combine.IsDirty = false;
+            foreach (var binding in combine.present.UpdateBinding)
+            {
+                binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(combine.context, currModel));
             }
         }
     }
@@ -108,7 +115,7 @@ internal class MVPCore
     internal static void Exit()
     {
         model = null;
-        viewType2Mock.Clear();
+        present2Mock.Clear();
 
         view2Present.Clear();
         view2combines.Clear();

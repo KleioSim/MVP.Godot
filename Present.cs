@@ -44,10 +44,10 @@ public abstract class Present<TView, IModel> : IPresent
 [AttributeUsage(AttributeTargets.Class)]
 public class MockModelAttribute : Attribute
 {
-    public Type ViewType { get; }
+    public Type PresentType { get; }
 
     public MockModelAttribute(Type type)
     {
-        ViewType = type;
+        PresentType = type;
     }
 }

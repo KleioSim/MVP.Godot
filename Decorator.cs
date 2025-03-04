@@ -12,7 +12,10 @@ public class Decorator : DispatchProxy
     protected override object Invoke(MethodInfo targetMethod, object[] args)
     {
         var result = targetMethod.Invoke(_decorated, args);
-        OnDataChanged?.Invoke();
+        if(targetMethod.Name == "OnMessage")
+        {
+            OnDataChanged?.Invoke();
+        }
 
         return result;
     }
