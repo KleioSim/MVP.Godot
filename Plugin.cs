@@ -9,7 +9,7 @@ public partial class Plugin : EditorPlugin
 {
 	public override void _EnterTree()
 	{
-        AddAutoloadSingleton("MVP_Global", "res://addons/KleioSim.MVP.Godot/Global.cs");
+        AddAutoloadSingleton("MVP_Global", "res://addons/MVP.Godot/Global.cs");
     }
 
 	public override void _ExitTree()
