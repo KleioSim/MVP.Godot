@@ -79,7 +79,7 @@ internal class MVPCore
             var control = binding.controlGetter.Invoke(view) as Control ?? throw new System.Exception();
             var signal = binding.SignalName as StringName ?? throw new System.Exception();
 
-            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(combine.context, model)));
+            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(combine.context, model ?? viewType2Mock.GetValueOrDefault(combine.view.GetType()))));
         }
     }
 
