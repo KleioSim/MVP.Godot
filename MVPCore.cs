@@ -81,7 +81,7 @@ internal class MVPCore
 
         foreach (var binding in present.SignalBindings)
         {
-            var control = binding.controlGetter.Invoke(view) as Control ?? throw new System.Exception();
+            var control = binding.controlGetter.Invoke(view) as Node ?? throw new System.Exception();
             var signal = binding.SignalName as StringName ?? throw new System.Exception();
 
             control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(combine.context, model ?? present2Mock.GetValueOrDefault(combine.present.GetType()))));
@@ -102,9 +102,14 @@ internal class MVPCore
                 continue;
             }
 
-            var currModel = model ?? present2Mock.GetValueOrDefault(combine.present.GetType());
-
             combine.IsDirty = false;
+
+            var currModel = model ?? present2Mock.GetValueOrDefault(combine.present.GetType());
+            if (currModel == null)
+            {
+                continue;
+            }
+
             foreach (var binding in combine.present.UpdateBinding)
             {
                 binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(combine.context, currModel));

@@ -25,6 +25,8 @@ public class Decorator : DispatchProxy
         object proxy = Create<T, Decorator>();
         ((Decorator)proxy).SetParameters(decorated);
 
+        OnDataChanged?.Invoke();
+
         return (T)proxy;
     }
 
