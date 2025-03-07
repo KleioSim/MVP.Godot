@@ -8,8 +8,9 @@ using System.Reflection;
 namespace KleioSim.MVP.Godot;
 internal class MVPCore
 {
-    private static readonly Dictionary<Type, IPresent> view2Present = new();
-    private static readonly Dictionary<IView, Combine> view2combines = new();
+    private static readonly Dictionary<Type, IPresent> viewType2Present = new();
+    private static readonly Dictionary<IView, Combine> view2Combine = new();
+    private static readonly Dictionary<IView, object> view2Context = new();
     private static readonly Dictionary<Type, object>  present2Mock= new();
 
     private static object model;
@@ -22,12 +23,12 @@ internal class MVPCore
             if (IsPresent(type))
             {
                 var viewType = type.BaseType.GetGenericArguments()[0];
-                if (view2Present.TryGetValue(viewType, out var presentType))
+                if (viewType2Present.TryGetValue(viewType, out var presentType))
                 {
                     throw new Exception();
                 }
 
-                view2Present.Add(viewType, Activator.CreateInstance(type) as IPresent);
+                viewType2Present.Add(viewType, Activator.CreateInstance(type) as IPresent);
                 continue;
             }
 
@@ -46,7 +47,7 @@ internal class MVPCore
 
         Decorator.OnDataChanged = () =>
         {
-            foreach (var combine in view2combines.Values)
+            foreach (var combine in view2Combine.Values)
             {
                 combine.IsDirty = true;
             }
@@ -70,32 +71,33 @@ internal class MVPCore
 
     internal static void AddViewNode(IView node)
     {
-        if (!view2Present.TryGetValue(node.GetType(), out var present))
+        if (!viewType2Present.TryGetValue(node.GetType(), out var present))
         {
             return;
         }
 
         var view = (IView)node;
         var combine = new Combine(node as IView, present);
-        view2combines.Add(view, combine);
+        view2Combine.Add(view, combine);
 
         foreach (var binding in present.SignalBindings)
         {
             var control = binding.controlGetter.Invoke(view) as Node ?? throw new System.Exception();
             var signal = binding.SignalName as StringName ?? throw new System.Exception();
 
-            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(combine.context, model ?? present2Mock.GetValueOrDefault(combine.present.GetType()))));
+            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(view2Context.GetValueOrDefault(view), model ?? present2Mock.GetValueOrDefault(combine.present.GetType()))));
         }
     }
 
     internal static void RemoveViewNode(IView view)
     {
-        view2combines.Remove(view);
+        view2Combine.Remove(view);
+        view2Context.Remove(view);
     }
 
     internal static void UpdateViewNodes()
     {
-        foreach (var combine in view2combines.Values)
+        foreach (var combine in view2Combine.Values)
         {
             if (!combine.IsDirty)
             {
@@ -112,7 +114,43 @@ internal class MVPCore
 
             foreach (var binding in combine.present.UpdateBinding)
             {
-                binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(combine.context, currModel));
+                binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(view2Context.GetValueOrDefault(combine.view), currModel));
+            }
+
+            foreach (var binding in combine.present.CollectionBinding)
+            {
+                var subItemContexts = binding.sourceGetter(view2Context.GetValueOrDefault(combine.view), currModel).ToArray();
+                foreach (var itemContext in subItemContexts)
+                {
+                    var protype = binding.protypeGetter(combine.view);
+                    var subViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
+                    var exitSubItems = new List<IView>();
+                    foreach (var subView in subViews)
+                    {
+                        if(view2Context.TryGetValue(subView, out var context))
+                        {
+                            continue;
+                        }
+
+                        if (!subItemContexts.Contains(context))
+                        {
+                            ((Node)subView).QueueFree();
+                        }
+
+                        exitSubItems.Add(subView);
+                    }
+
+                    foreach(var subItemConext in subItemContexts)
+                    {
+                        if (exitSubItems.Contains(subItemConext))
+                        {
+                            continue;
+                        }
+
+                        var subView = protype.CreateInstance() as IView ?? throw new Exception();
+                        view2Context.Add(subView, itemContext);
+                    }
+                }
             }
         }
     }
@@ -122,8 +160,8 @@ internal class MVPCore
         model = null;
         present2Mock.Clear();
 
-        view2Present.Clear();
-        view2combines.Clear();
+        viewType2Present.Clear();
+        view2Combine.Clear();
 
     }
 }
