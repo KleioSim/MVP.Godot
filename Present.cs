@@ -7,7 +7,7 @@ using KleioSim.MVP.Godot.Interfaces;
 using MVP.Godot.Bindings;
 
 namespace KleioSim.MVP.Godot;
-public abstract class Present<TView, IModel> : IPresent
+public abstract class Present<TView, IModel, TContext> : IPresent
     where TView : class, IView
 { 
     private readonly static List<SignalBinding> signalBindings = new();
@@ -21,7 +21,7 @@ public abstract class Present<TView, IModel> : IPresent
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
-        Expression<Func<object, IModel, TData>> sourceExpr)
+        Expression<Func<TContext, IModel, TData>> sourceExpr)
     {
         var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
 
@@ -34,23 +34,70 @@ public abstract class Present<TView, IModel> : IPresent
                 valueParameter)
             .Compile() ?? throw new System.InvalidOperationException();
 
-        updateBinding.Add(new UpdateBinding((view, data) => targetSetter((TView)view, (TData)data), (object context, object mdoel) => sourceGetter(context, (IModel)mdoel)));
+        updateBinding.Add(new UpdateBinding((view, data) => targetSetter((TView)view, (TData)data), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel)));
     }
 
-    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Expression<Action<object, IModel>> actionExpr)
+    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Expression<Action<TContext, IModel>> actionExpr)
     {
         var contrlGetter = controlExpr.Compile() ?? throw new System.InvalidOperationException();
         var action = actionExpr.Compile() ?? throw new System.InvalidOperationException();
 
-        signalBindings.Add(new SignalBinding((obj)=>contrlGetter((TView)obj), SignalName,(object obj1, object obj2)=> action(obj1, (IModel)obj2)));
+        signalBindings.Add(new SignalBinding((obj)=>contrlGetter((TView)obj), SignalName,(object obj1, object obj2)=> action((TContext)obj1, (IModel)obj2)));
     }
 
-    public static void BindCollection<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<object, IModel, IEnumerable<TData>>> sourceExpr)
+    public static void BindCollection<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<TContext, IModel, IEnumerable<TData>>> sourceExpr)
     {
         var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
         var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
 
-        collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter(context, (IModel)mdoel).Select(x=>(object)x)));
+        collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x=>(object)x)));
+    }
+}
+
+public abstract class Present<TView, IModel> : IPresent
+    where TView : class, IView
+{
+    private readonly static List<SignalBinding> signalBindings = new();
+    private readonly static List<UpdateBinding> updateBinding = new();
+    private readonly static List<CollectionBinding> collectionBinding = new();
+
+    public IEnumerable<SignalBinding> SignalBindings => signalBindings;
+    public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
+
+    public IEnumerable<CollectionBinding> CollectionBinding => collectionBinding;
+
+    public static void BindProperty<TData>(
+        Expression<Func<TView, TData>> targetExpr,
+        Expression<Func<IModel, TData>> sourceExpr)
+    {
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        var instanceParameter = targetExpr.Parameters.Single();
+        var valueParameter = System.Linq.Expressions.Expression.Parameter(typeof(TData), "value");
+
+        var targetSetter = System.Linq.Expressions.Expression.Lambda<Action<TView, TData>>(
+                System.Linq.Expressions.Expression.Assign(targetExpr.Body, valueParameter),
+                instanceParameter,
+                valueParameter)
+            .Compile() ?? throw new System.InvalidOperationException();
+
+        updateBinding.Add(new UpdateBinding((view, data) => targetSetter((TView)view, (TData)data), (object context, object mdoel) => sourceGetter((IModel)mdoel)));
+    }
+
+    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Expression<Action<IModel>> actionExpr)
+    {
+        var contrlGetter = controlExpr.Compile() ?? throw new System.InvalidOperationException();
+        var action = actionExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        signalBindings.Add(new SignalBinding((obj) => contrlGetter((TView)obj), SignalName, (object obj1, object obj2) => action((IModel)obj2)));
+    }
+
+    public static void BindCollection<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<IModel, IEnumerable<TData>>> sourceExpr)
+    {
+        var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel).Select(x => (object)x)));
     }
 }
 
@@ -62,5 +109,16 @@ public class MockModelAttribute : Attribute
     public MockModelAttribute(Type type)
     {
         PresentType = type;
+    }
+}
+
+[AttributeUsage(AttributeTargets.Class)]
+public class MockContextAttribute : Attribute
+{
+    public string MockPropertyName { get; }
+
+    public MockContextAttribute(string mockPropertyName)
+    {
+        MockPropertyName = mockPropertyName;
     }
 }

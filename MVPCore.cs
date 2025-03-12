@@ -11,7 +11,8 @@ internal class MVPCore
     private static readonly Dictionary<Type, IPresent> viewType2Present = new();
     private static readonly Dictionary<IView, Combine> view2Combine = new();
     private static readonly Dictionary<IView, object> view2Context = new();
-    private static readonly Dictionary<Type, object>  present2Mock= new();
+    private static readonly Dictionary<Type, object>  present2ModelMock= new();
+    private static readonly Dictionary<Type, object> present2ContextMock = new();
 
     private static object model;
 
@@ -32,15 +33,23 @@ internal class MVPCore
                 continue;
             }
 
-            if (IsMock(type))
+            if (IsModelMock(type))
             {
                 var mockAttrib = type.GetCustomAttribute<MockModelAttribute>();
 
+                var modelMock = Activator.CreateInstance(type);
                 var modelInterface = mockAttrib.PresentType.BaseType.GetGenericArguments()[1];
 
                 var decoratorMethod = typeof(Decorator).GetMethod("Create").MakeGenericMethod(modelInterface);
 
-                present2Mock.Add(mockAttrib.PresentType, decoratorMethod.Invoke(null, new object[] { Activator.CreateInstance(type) }));
+                present2ModelMock.Add(mockAttrib.PresentType, decoratorMethod.Invoke(null, new object[] { modelMock }));
+
+                var contextAttrib = type.GetCustomAttribute<MockContextAttribute>();
+                if (contextAttrib != null)
+                {
+                    present2ContextMock.Add(mockAttrib.PresentType, modelMock.GetType().GetProperty(contextAttrib.MockPropertyName).GetValue(modelMock));
+                }
+                
                 continue;
             }
         }
@@ -54,14 +63,15 @@ internal class MVPCore
         };
     }
 
-    private static bool IsMock(TypeInfo type)
+    private static bool IsModelMock(TypeInfo type)
     {
         return type.GetCustomAttribute<MockModelAttribute>() != null;
     }
 
     private static bool IsPresent(TypeInfo type)
     {
-        return (type.BaseType != null && type.BaseType.IsGenericType && type.BaseType.GetGenericTypeDefinition() == typeof(Present<,>));
+        return (type.BaseType != null && type.BaseType.IsGenericType 
+            && (type.BaseType.GetGenericTypeDefinition() == typeof(Present<,>) || type.BaseType.GetGenericTypeDefinition() == typeof(Present<,,>)));
     }
 
     public static void CreateSession<T>(T model)
@@ -85,7 +95,7 @@ internal class MVPCore
             var control = binding.controlGetter.Invoke(view) as Node ?? throw new System.Exception();
             var signal = binding.SignalName as StringName ?? throw new System.Exception();
 
-            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(view2Context.GetValueOrDefault(view), model ?? present2Mock.GetValueOrDefault(combine.present.GetType()))));
+            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(view2Context.GetValueOrDefault(view), model ?? present2ModelMock.GetValueOrDefault(combine.present.GetType()))));
         }
     }
 
@@ -97,48 +107,52 @@ internal class MVPCore
 
     internal static void UpdateViewNodes()
     {
-        foreach (var combine in view2Combine.Values)
+        foreach (var combine in view2Combine.Values.Where(x=>x.IsDirty).ToArray())
         {
-            if (!combine.IsDirty)
-            {
-                continue;
-            }
-
             combine.IsDirty = false;
 
-            var currModel = model ?? present2Mock.GetValueOrDefault(combine.present.GetType());
+            object currModel = model;
+            object context = null;
+
             if (currModel == null)
             {
-                continue;
+                currModel = present2ModelMock.GetValueOrDefault(combine.present.GetType());
+
+                context = present2ContextMock.GetValueOrDefault(combine.present.GetType());
             }
+            else
+            {
+                context = view2Context.GetValueOrDefault(combine.view);
+            }
+
 
             foreach (var binding in combine.present.UpdateBinding)
             {
-                binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(view2Context.GetValueOrDefault(combine.view), currModel));
+                binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(context, currModel));
             }
 
             foreach (var binding in combine.present.CollectionBinding)
             {
-                var subItemContexts = binding.sourceGetter(view2Context.GetValueOrDefault(combine.view), currModel).ToArray();
+                var subItemContexts = binding.sourceGetter(context, currModel).ToArray();
 
                 var protype = binding.protypeGetter(combine.view);
-                var currSubViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
+                var currItemViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
                 var exitSubItems = new Dictionary<IView, object>();
 
-                foreach (var subView in currSubViews)
+                foreach (var ItemView in currItemViews)
                 {
-                    if (!view2Context.TryGetValue(subView, out var context))
+                    if (!view2Context.TryGetValue(ItemView, out var ItemContext))
                     {
                         continue;
                     }
 
-                    if (!subItemContexts.Contains(context))
+                    if (!subItemContexts.Contains(ItemContext))
                     {
-                        ((Node)subView).QueueFree();
+                        ((Node)ItemView).QueueFree();
                         continue;
                     }
 
-                    exitSubItems.Add(subView, context);
+                    exitSubItems.Add(ItemView, ItemContext);
                 }
 
                 foreach (var subItemConext in subItemContexts)
@@ -158,7 +172,7 @@ internal class MVPCore
     internal static void Exit()
     {
         model = null;
-        present2Mock.Clear();
+        present2ModelMock.Clear();
 
         viewType2Present.Clear();
         view2Combine.Clear();
