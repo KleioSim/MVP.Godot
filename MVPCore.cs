@@ -120,36 +120,36 @@ internal class MVPCore
             foreach (var binding in combine.present.CollectionBinding)
             {
                 var subItemContexts = binding.sourceGetter(view2Context.GetValueOrDefault(combine.view), currModel).ToArray();
-                foreach (var itemContext in subItemContexts)
+
+                var protype = binding.protypeGetter(combine.view);
+                var currSubViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
+                var exitSubItems = new Dictionary<IView, object>();
+
+                foreach (var subView in currSubViews)
                 {
-                    var protype = binding.protypeGetter(combine.view);
-                    var subViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
-                    var exitSubItems = new List<IView>();
-                    foreach (var subView in subViews)
+                    if (!view2Context.TryGetValue(subView, out var context))
                     {
-                        if(view2Context.TryGetValue(subView, out var context))
-                        {
-                            continue;
-                        }
-
-                        if (!subItemContexts.Contains(context))
-                        {
-                            ((Node)subView).QueueFree();
-                        }
-
-                        exitSubItems.Add(subView);
+                        continue;
                     }
 
-                    foreach(var subItemConext in subItemContexts)
+                    if (!subItemContexts.Contains(context))
                     {
-                        if (exitSubItems.Contains(subItemConext))
-                        {
-                            continue;
-                        }
-
-                        var subView = protype.CreateInstance() as IView ?? throw new Exception();
-                        view2Context.Add(subView, itemContext);
+                        ((Node)subView).QueueFree();
+                        continue;
                     }
+
+                    exitSubItems.Add(subView, context);
+                }
+
+                foreach (var subItemConext in subItemContexts)
+                {
+                    if (exitSubItems.Values.Contains(subItemConext))
+                    {
+                        continue;
+                    }
+                    
+                    var subView = protype.CreateInstance() as IView ?? throw new Exception();
+                    view2Context.Add(subView, subItemConext);
                 }
             }
         }
