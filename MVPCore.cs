@@ -105,6 +105,15 @@ internal class MVPCore
         view2Context.Remove(view);
     }
 
+    internal static void SyncContext(IView source, IView target)
+    {
+        var context = view2Context.GetValueOrDefault(source);
+        if(context != null)
+        {
+            view2Context.Add(target, context);
+        }
+    }
+
     internal static void UpdateViewNodes()
     {
         foreach (var combine in view2Combine.Values.Where(x=>x.IsDirty).ToArray())
