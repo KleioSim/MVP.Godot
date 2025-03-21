@@ -187,4 +187,9 @@ internal class MVPCore
         view2Combine.Clear();
 
     }
+
+    internal static void AddContext(object context, IView instanceView)
+    {
+        view2Context.Add(instanceView, context);
+    }
 }
