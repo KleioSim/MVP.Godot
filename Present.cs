@@ -13,11 +13,17 @@ public abstract class Present<TView, IModel, TContext> : IPresent
     private readonly static List<SignalBinding> signalBindings = new();
     private readonly static List<UpdateBinding> updateBinding = new();
     private readonly static List<CollectionBinding> collectionBinding = new();
+    private readonly static List<CollectionBinding2> collectionBinding2 = new();
+    private readonly static List<TilemapBinding> tilemapBinding = new();
 
     public IEnumerable<SignalBinding> SignalBindings => signalBindings;
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
 
     public IEnumerable<CollectionBinding> CollectionBinding => collectionBinding;
+
+    public IEnumerable<TilemapBinding> TilemapBindings => tilemapBinding;
+
+    public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
@@ -52,6 +58,14 @@ public abstract class Present<TView, IModel, TContext> : IPresent
 
         collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x=>(object)x)));
     }
+
+    public static void BindCollection<TData>(Expression<Func<TView, ICollectionView>> protypeExpr, Expression<Func<TContext, IModel, IEnumerable<TData>>> sourceExpr)
+    {
+        var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        collectionBinding2.Add(new CollectionBinding2((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x => (object)x)));
+    }
 }
 
 public abstract class Present<TView, IModel> : IPresent
@@ -60,11 +74,15 @@ public abstract class Present<TView, IModel> : IPresent
     private readonly static List<SignalBinding> signalBindings = new();
     private readonly static List<UpdateBinding> updateBinding = new();
     private readonly static List<CollectionBinding> collectionBinding = new();
+    private readonly static List<TilemapBinding> tilemapBinding = new();
+    private readonly static List<CollectionBinding2> collectionBinding2 = new();
 
     public IEnumerable<SignalBinding> SignalBindings => signalBindings;
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
-
     public IEnumerable<CollectionBinding> CollectionBinding => collectionBinding;
+    public IEnumerable<TilemapBinding> TilemapBindings => tilemapBinding;
+
+    public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
@@ -99,6 +117,23 @@ public abstract class Present<TView, IModel> : IPresent
 
         collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel).Select(x => (object)x)));
     }
+
+    public static void BindTileMap<TData>(Expression<Func<TView, TileMapLayer>> controlExpr, Expression<Func<IModel, IReadOnlyDictionary<Vector2I, TData>>> sourceExpr)
+    {
+        var tilemapGetter = controlExpr.Compile() ?? throw new System.InvalidOperationException();
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        tilemapBinding.Add(new TilemapBinding((view) => tilemapGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel).ToDictionary(p=>p.Key, p=> (object)p.Value)));
+    }
+
+    public static void BindCollection<TData>(Expression<Func<TView, ICollectionView>> protypeExpr, Expression<Func<IModel, IEnumerable<TData>>> sourceExpr)
+    {
+        var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        collectionBinding2.Add(new CollectionBinding2((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel).Select(x => (object)x)));
+    }
+
 }
 
 [AttributeUsage(AttributeTargets.Class)]

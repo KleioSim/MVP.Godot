@@ -2,6 +2,7 @@
 using KleioSim.MVP.Godot.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Reflection;
 
@@ -13,6 +14,7 @@ internal class MVPCore
     private static readonly Dictionary<IView, object> view2Context = new();
     private static readonly Dictionary<Type, object>  present2ModelMock= new();
     private static readonly Dictionary<Type, object> present2ContextMock = new();
+    private static readonly Dictionary<Vector2I, object> cellPos2Context = new();
 
     private static object model;
 
@@ -95,7 +97,18 @@ internal class MVPCore
             var control = binding.controlGetter.Invoke(view) as Node ?? throw new System.Exception();
             var signal = binding.SignalName as StringName ?? throw new System.Exception();
 
-            control.Connect(signal, Callable.From(() => binding.handlerAction.Invoke(view2Context.GetValueOrDefault(view), model ?? present2ModelMock.GetValueOrDefault(combine.present.GetType()))));
+            control.Connect(signal, Callable.From(() => 
+                binding.handlerAction.Invoke(
+                    view2Context.GetValueOrDefault(view) ?? present2ContextMock.GetValueOrDefault(combine.present.GetType()),
+                    model ?? present2ModelMock.GetValueOrDefault(combine.present.GetType())
+                    )
+                ));
+        }
+
+        if(view is ICellView cellView)
+        {
+            view2Context.Add(view, cellPos2Context[cellView.Location]);
+            cellPos2Context.Remove(cellView.Location);
         }
     }
 
@@ -103,6 +116,10 @@ internal class MVPCore
     {
         view2Combine.Remove(view);
         view2Context.Remove(view);
+        if(view is ICellView cellView)
+        {
+            cellPos2Context.Remove(cellView.Location);
+        }
     }
 
     internal static void SyncContext(IView source, IView target)
@@ -116,7 +133,7 @@ internal class MVPCore
 
     internal static void UpdateViewNodes()
     {
-        foreach (var combine in view2Combine.Values.Where(x=>x.IsDirty).ToArray())
+        foreach (var combine in view2Combine.Values.Where(x=>x.IsDirty && ((Control)x.view).IsVisibleInTree()).ToArray())
         {
             combine.IsDirty = false;
 
@@ -152,10 +169,11 @@ internal class MVPCore
                 {
                     if (!view2Context.TryGetValue(ItemView, out var ItemContext))
                     {
+                        ((Node)ItemView).QueueFree();
                         continue;
                     }
 
-                    if (!subItemContexts.Contains(ItemContext))
+                    if (subItemContexts.All(x=> x!=ItemContext))
                     {
                         ((Node)ItemView).QueueFree();
                         continue;
@@ -175,7 +193,89 @@ internal class MVPCore
                     view2Context.Add(subView, subItemConext);
                 }
             }
+
+            foreach (var binding in combine.present.CollectionBinding2)
+            {
+                var subItemContexts = binding.sourceGetter(context, currModel).ToArray();
+
+                var container = binding.protypeGetter(combine.view);
+                var currItemViews = container.PlaceHolder.GetParent().GetChildren().OfType<IView>().ToArray();
+                var exitSubItems = new Dictionary<IView, object>();
+
+                foreach (var ItemView in currItemViews)
+                {
+                    if (!view2Context.TryGetValue(ItemView, out var ItemContext))
+                    {
+                        ((Node)ItemView).QueueFree();
+                        continue;
+                    }
+
+                    if (subItemContexts.All(x => x != ItemContext))
+                    {
+                        ((Node)ItemView).QueueFree();
+                        continue;
+                    }
+
+                    exitSubItems.Add(ItemView, ItemContext);
+                }
+
+                foreach (var subItemConext in subItemContexts)
+                {
+                    if (exitSubItems.Values.Contains(subItemConext))
+                    {
+                        continue;
+                    }
+
+                    var subView = container.PlaceHolder.CreateInstance() as IView ?? throw new Exception();
+                    view2Context.Add(subView, subItemConext);
+                }
+            }
+
+            foreach (var binding in combine.present.TilemapBindings)
+            {
+                var tilemap = binding.tilemapGetter.Invoke(combine.view);
+                var dict = binding.sourceGetter.Invoke(context, currModel);
+
+                var cellIndexes = tilemap.GetUsedCells();
+
+                foreach (var cellIndex in cellIndexes)
+                {
+                    var item = dict.GetValueOrDefault(cellIndex);
+                    if(item == null)
+                    {
+                        tilemap.EraseCell(cellIndex);
+                        continue;
+                    }
+
+                    var view = GetChildByMapLocation(tilemap, cellIndex) as IView ?? throw new Exception();
+                    view2Context[view] = item;
+                }
+
+                foreach (var pair in dict)
+                {
+                    var cellIndex = pair.Key;
+                    if(tilemap.GetCellSourceId(cellIndex) == -1)
+                    {
+                        tilemap.SetCell(cellIndex, 0, Vector2I.Zero, 1);
+                        var tileData = tilemap.GetCellTileData(cellIndex);
+                        cellPos2Context.Add(cellIndex, pair.Value);
+                    }
+                }
+            }
         }
+    }
+
+    private static Node GetChildByMapLocation(TileMapLayer tilemap, Vector2I cellIndex)
+    {
+        foreach(Control child in tilemap.GetChildren()) 
+        { 
+            if(tilemap.LocalToMap(child.Position + child.Size / 2) == cellIndex)
+            {
+                return child;
+            }
+        }
+
+        throw new Exception();
     }
 
     internal static void Exit()
