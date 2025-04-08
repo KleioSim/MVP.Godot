@@ -15,7 +15,7 @@ public abstract class Present<TView, IModel, TContext> : IPresent
     private readonly static List<CollectionBinding> collectionBinding = new();
     private readonly static List<CollectionBinding2> collectionBinding2 = new();
     private readonly static List<TilemapBinding> tilemapBinding = new();
-
+    private readonly static List<PlaceHolderBinding> placeHolderBindings = new();
     public IEnumerable<SignalBinding> SignalBindings => signalBindings;
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
 
@@ -25,12 +25,12 @@ public abstract class Present<TView, IModel, TContext> : IPresent
 
     public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
 
+    public IEnumerable<PlaceHolderBinding> PlaceHolderBindings => placeHolderBindings;
+
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
-        Expression<Func<TContext, IModel, TData>> sourceExpr)
+        Func<TContext, IModel, TData> sourceGetter)
     {
-        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
-
         var instanceParameter = targetExpr.Parameters.Single();
         var valueParameter = System.Linq.Expressions.Expression.Parameter(typeof(TData), "value");
 
@@ -76,13 +76,13 @@ public abstract class Present<TView, IModel> : IPresent
     private readonly static List<CollectionBinding> collectionBinding = new();
     private readonly static List<TilemapBinding> tilemapBinding = new();
     private readonly static List<CollectionBinding2> collectionBinding2 = new();
-
+    private readonly static List<PlaceHolderBinding> placeHolderBindings = new();
     public IEnumerable<SignalBinding> SignalBindings => signalBindings;
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
     public IEnumerable<CollectionBinding> CollectionBinding => collectionBinding;
     public IEnumerable<TilemapBinding> TilemapBindings => tilemapBinding;
-
     public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
+    public IEnumerable<PlaceHolderBinding> PlaceHolderBindings => placeHolderBindings;
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
@@ -134,6 +134,14 @@ public abstract class Present<TView, IModel> : IPresent
         collectionBinding2.Add(new CollectionBinding2((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel).Select(x => (object)x)));
     }
 
+    public static void BindPlaceHolder<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<IModel, TData>> sourceExpr)
+    {
+        var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        placeHolderBindings.Add(new PlaceHolderBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel)));
+
+    }
 }
 
 [AttributeUsage(AttributeTargets.Class)]

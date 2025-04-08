@@ -262,6 +262,24 @@ internal class MVPCore
                     }
                 }
             }
+
+            foreach (var binding in combine.present.PlaceHolderBindings)
+            {
+                var itemContext = binding.sourceGetter(context, currModel);
+
+                var protype = binding.protypeGetter(combine.view);
+                var itemView = protype.GetParent().GetChildren().OfType<IView>().SingleOrDefault();
+                if (itemView != null && view2Context[itemView] != itemContext)
+                {
+                    ((Node)itemView).QueueFree();
+                }
+
+                if (itemContext != null)
+                {
+                    itemView = protype.CreateInstance() as IView ?? throw new Exception();
+                    view2Context.Add(itemView, itemContext);
+                }
+            }
         }
     }
 

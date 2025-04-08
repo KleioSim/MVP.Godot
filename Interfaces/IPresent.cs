@@ -10,4 +10,6 @@ public interface IPresent
     IEnumerable<CollectionBinding> CollectionBinding { get; }
     IEnumerable<CollectionBinding2> CollectionBinding2 { get; }
     IEnumerable<TilemapBinding> TilemapBindings { get; }
+
+    IEnumerable<PlaceHolderBinding> PlaceHolderBindings { get; }
 }
