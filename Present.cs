@@ -86,10 +86,8 @@ public abstract class Present<TView, IModel> : IPresent
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
-        Expression<Func<IModel, TData>> sourceExpr)
+        Func<IModel, TData> sourceGetter)
     {
-        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
-
         var instanceParameter = targetExpr.Parameters.Single();
         var valueParameter = System.Linq.Expressions.Expression.Parameter(typeof(TData), "value");
 
