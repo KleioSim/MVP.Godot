@@ -16,6 +16,7 @@ public abstract class Present<TView, IModel, TContext> : IPresent
     private readonly static List<CollectionBinding2> collectionBinding2 = new();
     private readonly static List<TilemapBinding> tilemapBinding = new();
     private readonly static List<PlaceHolderBinding> placeHolderBindings = new();
+    private readonly static List<PackedSceneBinding> packedSceneBindings = new();
     public IEnumerable<SignalBinding> SignalBindings => signalBindings;
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
 
@@ -26,6 +27,8 @@ public abstract class Present<TView, IModel, TContext> : IPresent
     public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
 
     public IEnumerable<PlaceHolderBinding> PlaceHolderBindings => placeHolderBindings;
+
+    public IEnumerable<PackedSceneBinding> PackedSceneBindings => packedSceneBindings;
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
@@ -43,10 +46,9 @@ public abstract class Present<TView, IModel, TContext> : IPresent
         updateBinding.Add(new UpdateBinding((view, data) => targetSetter((TView)view, (TData)data), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel)));
     }
 
-    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Expression<Action<TContext, IModel>> actionExpr)
+    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Action<TContext, IModel> action)
     {
         var contrlGetter = controlExpr.Compile() ?? throw new System.InvalidOperationException();
-        var action = actionExpr.Compile() ?? throw new System.InvalidOperationException();
 
         signalBindings.Add(new SignalBinding((obj)=>contrlGetter((TView)obj), SignalName,(object obj1, object obj2)=> action((TContext)obj1, (IModel)obj2)));
     }
@@ -77,12 +79,15 @@ public abstract class Present<TView, IModel> : IPresent
     private readonly static List<TilemapBinding> tilemapBinding = new();
     private readonly static List<CollectionBinding2> collectionBinding2 = new();
     private readonly static List<PlaceHolderBinding> placeHolderBindings = new();
+    private readonly static List<PackedSceneBinding> packedSceneBindings = new();
+
     public IEnumerable<SignalBinding> SignalBindings => signalBindings;
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
     public IEnumerable<CollectionBinding> CollectionBinding => collectionBinding;
     public IEnumerable<TilemapBinding> TilemapBindings => tilemapBinding;
     public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
     public IEnumerable<PlaceHolderBinding> PlaceHolderBindings => placeHolderBindings;
+    public IEnumerable<PackedSceneBinding> PackedSceneBindings => packedSceneBindings;
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
@@ -138,7 +143,12 @@ public abstract class Present<TView, IModel> : IPresent
         var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
 
         placeHolderBindings.Add(new PlaceHolderBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel)));
+    }
 
+    public static void BindPackedScene<TData>(Expression<Func<TView, PackedScene>> protypeExpr, Func<IModel, TData> sourceGetter)
+    {
+        var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
+        packedSceneBindings.Add(new PackedSceneBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((IModel)mdoel)));
     }
 }
 

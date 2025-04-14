@@ -12,4 +12,5 @@ public interface IPresent
     IEnumerable<TilemapBinding> TilemapBindings { get; }
 
     IEnumerable<PlaceHolderBinding> PlaceHolderBindings { get; }
+    IEnumerable<PackedSceneBinding> PackedSceneBindings { get; }
 }

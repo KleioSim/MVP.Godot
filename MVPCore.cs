@@ -280,6 +280,26 @@ internal class MVPCore
                     view2Context.Add(itemView, itemContext);
                 }
             }
+
+            foreach (var binding in combine.present.PackedSceneBindings)
+            {
+                var itemContext = binding.sourceGetter(context, currModel);
+
+                var protype = binding.protypeGetter(combine.view);
+                var itemView = Global.Instance.GetTree().Root.GetChildren().SingleOrDefault(x => x.Name == protype.GetState().GetNodeName(0)) as IView;
+                if (itemView != null && view2Context[itemView] != itemContext)
+                {
+                    ((Node)itemView).QueueFree();
+                }
+
+                if (itemContext != null)
+                {
+                    itemView = protype.Instantiate() as IView ?? throw new Exception();
+                    view2Context.Add(itemView, itemContext);
+
+                    Global.Instance.GetTree().Root.AddChild(itemView as Node);
+                }
+            }
         }
     }
 
