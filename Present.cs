@@ -68,6 +68,14 @@ public abstract class Present<TView, IModel, TContext> : IPresent
 
         collectionBinding2.Add(new CollectionBinding2((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x => (object)x)));
     }
+
+    public static void BindPlaceHolder<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<TContext, IModel, TData>> sourceExpr)
+    {
+        var protypeGetter = protypeExpr.Compile() ?? throw new System.InvalidOperationException();
+        var sourceGetter = sourceExpr.Compile() ?? throw new System.InvalidOperationException();
+
+        placeHolderBindings.Add(new PlaceHolderBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel)));
+    }
 }
 
 public abstract class Present<TView, IModel> : IPresent

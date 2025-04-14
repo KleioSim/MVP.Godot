@@ -268,10 +268,19 @@ internal class MVPCore
                 var itemContext = binding.sourceGetter(context, currModel);
 
                 var protype = binding.protypeGetter(combine.view);
+                var items = protype.GetParent().GetChildren().OfType<IView>().ToArray();
                 var itemView = protype.GetParent().GetChildren().OfType<IView>().SingleOrDefault();
-                if (itemView != null && view2Context[itemView] != itemContext)
+                if (itemView != null)
                 {
-                    ((Node)itemView).QueueFree();
+                    if(view2Context[itemView] == itemContext)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        ((Node)itemView).QueueFree();
+                    }
+
                 }
 
                 if (itemContext != null)
