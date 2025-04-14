@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://dbkfx50cqj15"]
 
-[ext_resource type="Script" path="res://addons/MVP.Godot/Example/DemonView.cs" id="1_4c1jp"]
+[ext_resource type="Script" uid="uid://b80cjeviiov0d" path="res://addons/MVP.Godot/Example/DemonView.cs" id="1_4c1jp"]
 
 [node name="Control" type="Control"]
 layout_mode = 3
