@@ -203,43 +203,6 @@ internal class MVPCore
                 }
             }
 
-            foreach (var binding in combine.present.CollectionBinding2)
-            {
-                var subItemContexts = binding.sourceGetter(context, currModel).ToArray();
-
-                var container = binding.protypeGetter(combine.view);
-                var currItemViews = container.PlaceHolder.GetParent().GetChildren().OfType<IView>().ToArray();
-                var exitSubItems = new Dictionary<IView, object>();
-
-                foreach (var ItemView in currItemViews)
-                {
-                    if (!view2Context.TryGetValue(ItemView, out var ItemContext))
-                    {
-                        ((Node)ItemView).QueueFree();
-                        continue;
-                    }
-
-                    if (subItemContexts.All(x => x != ItemContext))
-                    {
-                        ((Node)ItemView).QueueFree();
-                        continue;
-                    }
-
-                    exitSubItems.Add(ItemView, ItemContext);
-                }
-
-                foreach (var subItemConext in subItemContexts)
-                {
-                    if (exitSubItems.Values.Contains(subItemConext))
-                    {
-                        continue;
-                    }
-
-                    var subView = container.PlaceHolder.CreateInstance() as IView ?? throw new Exception();
-                    view2Context.Add(subView, subItemConext);
-                }
-            }
-
             foreach (var binding in combine.present.TilemapBindings)
             {
                 var tilemap = binding.tilemapGetter.Invoke(combine.view);

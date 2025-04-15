@@ -43,14 +43,6 @@ public abstract class Present<TView, IModel, TContext> :  Present<TView, IModel>
         collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x=>(object)x)));
     }
 
-    public static void BindCollection<TData>(Expression<Func<TView, ICollectionView>> protypeExpr, Expression<Func<TContext, IModel, IEnumerable<TData>>> sourceExpr)
-    {
-        var protypeGetter = protypeExpr.Compile() ;
-        var sourceGetter = sourceExpr.Compile() ;
-
-        collectionBinding2.Add(new CollectionBinding2((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x => (object)x)));
-    }
-
     public static void BindPlaceHolder<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<TContext, IModel, TData>> sourceExpr)
     {
         var protypeGetter = protypeExpr.Compile() ;
@@ -67,7 +59,6 @@ public abstract class Present<TView, IModel> : IPresent
     protected readonly static List<UpdateBinding> updateBinding = new();
     protected readonly static List<CollectionBinding> collectionBinding = new();
     protected readonly static List<TilemapBinding> tilemapBinding = new();
-    protected readonly static List<CollectionBinding2> collectionBinding2 = new();
     protected readonly static List<PlaceHolderBinding> placeHolderBindings = new();
     protected readonly static List<PackedSceneBinding> packedSceneBindings = new();
 
@@ -75,7 +66,6 @@ public abstract class Present<TView, IModel> : IPresent
     public IEnumerable<UpdateBinding> UpdateBinding => updateBinding;
     public IEnumerable<CollectionBinding> CollectionBinding => collectionBinding;
     public IEnumerable<TilemapBinding> TilemapBindings => tilemapBinding;
-    public IEnumerable<CollectionBinding2> CollectionBinding2 => collectionBinding2;
     public IEnumerable<PlaceHolderBinding> PlaceHolderBindings => placeHolderBindings;
     public IEnumerable<PackedSceneBinding> PackedSceneBindings => packedSceneBindings;
 
@@ -126,16 +116,6 @@ public abstract class Present<TView, IModel> : IPresent
         tilemapBinding.Add(new TilemapBinding(
             (view) => tilemapGetter((TView)view), 
             (object context, object mdoel) => sourceGetter((IModel)mdoel).ToDictionary(p=>p.Key, p=> (object)p.Value)));
-    }
-
-    public static void BindCollection<TData>(Expression<Func<TView, ICollectionView>> protypeExpr, Expression<Func<IModel, IEnumerable<TData>>> sourceExpr)
-    {
-        var protypeGetter = protypeExpr.Compile() ;
-        var sourceGetter = sourceExpr.Compile() ;
-
-        collectionBinding2.Add(new CollectionBinding2(
-            (view) => protypeGetter((TView)view), 
-            (object context, object mdoel) => sourceGetter((IModel)mdoel).Select(x => (object)x)));
     }
 
     public static void BindPlaceHolder<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<IModel, TData>> sourceExpr)

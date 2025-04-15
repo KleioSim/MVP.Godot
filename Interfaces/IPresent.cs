@@ -8,7 +8,6 @@ public interface IPresent
     IEnumerable<SignalBinding> SignalBindings { get; }
     IEnumerable<UpdateBinding> UpdateBinding { get; }
     IEnumerable<CollectionBinding> CollectionBinding { get; }
-    IEnumerable<CollectionBinding2> CollectionBinding2 { get; }
     IEnumerable<TilemapBinding> TilemapBindings { get; }
 
     IEnumerable<PlaceHolderBinding> PlaceHolderBindings { get; }
