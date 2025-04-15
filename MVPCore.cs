@@ -31,8 +31,17 @@ internal class MVPCore
                     throw new Exception();
                 }
 
-                viewType2Present.Add(viewType, Activator.CreateInstance(type) as IPresent);
-                continue;
+                try
+                {
+                    var present = Activator.CreateInstance(type) as IPresent;
+                    viewType2Present.Add(viewType, present);
+                    continue;
+                }
+                catch(Exception e)
+                {
+                    throw;
+                }
+
             }
 
             if (IsModelMock(type))
@@ -72,7 +81,7 @@ internal class MVPCore
 
     private static bool IsPresent(TypeInfo type)
     {
-        return (type.BaseType != null && type.BaseType.IsGenericType 
+        return (!type.IsAbstract && type.BaseType != null && type.BaseType.IsGenericType 
             && (type.BaseType.GetGenericTypeDefinition() == typeof(Present<,>) || type.BaseType.GetGenericTypeDefinition() == typeof(Present<,,>)));
     }
 
