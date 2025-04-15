@@ -268,9 +268,16 @@ internal class MVPCore
 
                 var protype = binding.protypeGetter(combine.view);
                 var itemView = Global.Instance.GetTree().Root.GetChildren().SingleOrDefault(x => x.Name == protype.GetState().GetNodeName(0)) as IView;
-                if (itemView != null && view2Context[itemView] != itemContext)
+                if (itemView != null)
                 {
-                    ((Node)itemView).QueueFree();
+                    if (view2Context[itemView] == itemContext)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        ((Node)itemView).QueueFree();
+                    }
                 }
 
                 if (itemContext != null)
