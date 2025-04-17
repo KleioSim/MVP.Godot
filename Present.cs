@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -87,10 +87,9 @@ public abstract class Present<TView, IModel> : IPresent
             (object context, object mdoel) => sourceGetter((IModel)mdoel)));
     }
 
-    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Expression<Action<IModel>> actionExpr)
+    public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Action<IModel> action)
     {
         var contrlGetter = controlExpr.Compile() ;
-        var action = actionExpr.Compile() ;
 
         signalBindings.Add(new SignalBinding(
             (obj) => contrlGetter((TView)obj), 
