@@ -1,10 +1,11 @@
-﻿using Godot;
+using Godot;
 using KleioSim.MVP.Godot.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using Tais.Interfaces;
 
 namespace KleioSim.MVP.Godot;
 internal class MVPCore
@@ -317,5 +318,11 @@ internal class MVPCore
     internal static void AddContext(object context, IView instanceView)
     {
         view2Context.Add(instanceView, context);
+    }
+
+    internal static void UpdateContext(IView view, object context)
+    {
+        view2Context[view] = context;
+        view2Combine[view].IsDirty = true;
     }
 }
