@@ -35,10 +35,10 @@ public abstract class Present<TView, IModel, TContext> :  Present<TView, IModel>
         signalBindings.Add(new SignalBinding((obj)=>contrlGetter((TView)obj), SignalName,(object obj1, object obj2)=> action((TContext)obj1, (IModel)obj2)));
     }
 
-    public static void BindCollection<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<TContext, IModel, IEnumerable<TData>>> sourceExpr)
+    public static void BindCollection<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Func<TContext, IModel, IEnumerable<TData>> sourceExpr)
     {
         var protypeGetter = protypeExpr.Compile() ;
-        var sourceGetter = sourceExpr.Compile() ;
+        var sourceGetter = sourceExpr;
 
         collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x=>(object)x)));
     }
