@@ -29,7 +29,7 @@ internal class MVPCore
                 var viewType = type.BaseType.GetGenericArguments()[0];
                 if (viewType2Present.TryGetValue(viewType, out var presentType))
                 {
-                    throw new Exception();
+                    throw new Exception($"already find present of type {viewType}");
                 }
 
                 try
@@ -143,7 +143,7 @@ internal class MVPCore
 
     internal static void UpdateViewNodes()
     {
-        foreach (var combine in view2Combine.Values.Where(x=>x.IsDirty && ((Control)x.view).IsVisibleInTree()).ToArray())
+        foreach (var combine in view2Combine.Values.Where(x=>x.IsDirty).ToArray())
         {
             combine.IsDirty = false;
 
@@ -164,11 +164,20 @@ internal class MVPCore
 
             foreach (var binding in combine.present.UpdateBinding)
             {
+                if(!binding.freshOnlyVisable && !((Control)combine.view).IsVisibleInTree())
+                {
+                    continue;
+                }
                 binding.targetSetter.Invoke(combine.view, binding.sourceGetter.Invoke(context, currModel));
             }
 
             foreach (var binding in combine.present.CollectionBinding)
             {
+                if (!((Control)combine.view).IsVisibleInTree())
+                {
+                    continue;
+                }
+
                 var subItemContexts = binding.sourceGetter(context, currModel).ToArray();
 
                 var protype = binding.protypeGetter(combine.view);
@@ -206,6 +215,10 @@ internal class MVPCore
 
             foreach (var binding in combine.present.TilemapBindings)
             {
+                if (!((Control)combine.view).IsVisibleInTree())
+                {
+                    continue;
+                }
                 var tilemap = binding.tilemapGetter.Invoke(combine.view);
                 var dict = binding.sourceGetter.Invoke(context, currModel);
 
@@ -238,6 +251,10 @@ internal class MVPCore
 
             foreach (var binding in combine.present.PlaceHolderBindings)
             {
+                if (!((Control)combine.view).IsVisibleInTree())
+                {
+                    continue;
+                }
                 var itemContext = binding.sourceGetter(context, currModel);
 
                 var protype = binding.protypeGetter(combine.view);
@@ -265,6 +282,11 @@ internal class MVPCore
 
             foreach (var binding in combine.present.PackedSceneBindings)
             {
+                if (!((Control)combine.view).IsVisibleInTree())
+                {
+                    continue;
+                }
+
                 var itemContext = binding.sourceGetter(context, currModel);
 
                 var protype = binding.protypeGetter(combine.view);

@@ -14,7 +14,8 @@ public abstract class Present<TView, IModel, TContext> :  Present<TView, IModel>
 { 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
-        Func<TContext, IModel, TData> sourceGetter)
+        Func<TContext, IModel, TData> sourceGetter,
+        bool freshOnlyVisable = true)
     {
         var instanceParameter = targetExpr.Parameters.Single();
         var valueParameter = Expression.Parameter(typeof(TData), "value");
@@ -25,7 +26,7 @@ public abstract class Present<TView, IModel, TContext> :  Present<TView, IModel>
                 valueParameter)
             .Compile();
 
-        updateBinding.Add(new UpdateBinding((view, data) => targetSetter((TView)view, (TData)data), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel)));
+        updateBinding.Add(new UpdateBinding((view, data) => targetSetter((TView)view, (TData)data), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel), freshOnlyVisable));
     }
 
     public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Action<TContext, IModel> action)
@@ -71,7 +72,8 @@ public abstract class Present<TView, IModel> : IPresent
 
     public static void BindProperty<TData>(
         Expression<Func<TView, TData>> targetExpr,
-        Func<IModel, TData> sourceGetter)
+        Func<IModel, TData> sourceGetter,
+        bool freshOnlyVisiable = true)
     {
         var instanceParameter = targetExpr.Parameters.Single();
         var valueParameter = Expression.Parameter(typeof(TData), "value");
@@ -84,7 +86,8 @@ public abstract class Present<TView, IModel> : IPresent
 
         updateBinding.Add(new UpdateBinding(
             (view, data) => targetSetter((TView)view, (TData)data), 
-            (object context, object mdoel) => sourceGetter((IModel)mdoel)));
+            (object context, object mdoel) => sourceGetter((IModel)mdoel),
+            freshOnlyVisiable));
     }
 
     public static void BindSignal<TControl>(Expression<Func<TView, TControl>> controlExpr, object SignalName, Action<IModel> action)
