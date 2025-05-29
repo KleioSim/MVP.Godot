@@ -169,38 +169,45 @@ internal class MVPCore
 
             foreach (var binding in combine.present.CollectionBinding)
             {
-                var subItemContexts = binding.sourceGetter(context, currModel).ToArray();
-
-                var protype = binding.protypeGetter(combine.view);
-                var currItemViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
-                var exitSubItems = new Dictionary<IView, object>();
-
-                foreach (var ItemView in currItemViews)
+                try
                 {
-                    if (!view2Context.TryGetValue(ItemView, out var ItemContext))
+                    var subItemContexts = binding.sourceGetter(context, currModel).ToArray();
+
+                    var protype = binding.protypeGetter(combine.view);
+                    var currItemViews = protype.GetParent().GetChildren().OfType<IView>().ToArray();
+                    var exitSubItems = new Dictionary<IView, object>();
+
+                    foreach (var ItemView in currItemViews)
                     {
-                        ((Node)ItemView).QueueFree();
-                        continue;
+                        if (!view2Context.TryGetValue(ItemView, out var ItemContext))
+                        {
+                            ((Node)ItemView).QueueFree();
+                            continue;
+                        }
+
+                        if (subItemContexts.All(x => x != ItemContext))
+                        {
+                            ((Node)ItemView).QueueFree();
+                            continue;
+                        }
+
+                        exitSubItems.Add(ItemView, ItemContext);
                     }
 
-                    if (subItemContexts.All(x=> x!=ItemContext))
+                    foreach (var subItemConext in subItemContexts)
                     {
-                        ((Node)ItemView).QueueFree();
-                        continue;
-                    }
+                        if (exitSubItems.Values.Contains(subItemConext))
+                        {
+                            continue;
+                        }
 
-                    exitSubItems.Add(ItemView, ItemContext);
+                        var subView = protype.CreateInstance() as IView ?? throw new Exception();
+                        view2Context.Add(subView, subItemConext);
+                    }
                 }
-
-                foreach (var subItemConext in subItemContexts)
+                catch (Exception ex)
                 {
-                    if (exitSubItems.Values.Contains(subItemConext))
-                    {
-                        continue;
-                    }
-                    
-                    var subView = protype.CreateInstance() as IView ?? throw new Exception();
-                    view2Context.Add(subView, subItemConext);
+                    throw new Exception($"update collection binding failed! view:{combine.view.GetType().Name}, protype:{binding.protypeString}", ex);
                 }
             }
 

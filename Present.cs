@@ -38,10 +38,10 @@ public abstract class Present<TView, IModel, TContext> :  Present<TView, IModel>
 
     public static void BindCollection<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Func<TContext, IModel, IEnumerable<TData>> sourceExpr)
     {
-        var protypeGetter = protypeExpr.Compile() ;
+        var protypeGetter = protypeExpr.Compile();
         var sourceGetter = sourceExpr;
 
-        collectionBinding.Add(new CollectionBinding((view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x=>(object)x)));
+        collectionBinding.Add(new CollectionBinding(protypeExpr.ToString(), (view) => protypeGetter((TView)view), (object context, object mdoel) => sourceGetter((TContext)context, (IModel)mdoel).Select(x => (object)x)));
     }
 
     public static void BindPlaceHolder<TData>(Expression<Func<TView, InstancePlaceholder>> protypeExpr, Expression<Func<TContext, IModel, TData>> sourceExpr)
@@ -106,6 +106,7 @@ public abstract class Present<TView, IModel> : IPresent
         var sourceGetter = sourceExpr.Compile() ;
 
         collectionBinding.Add(new CollectionBinding(
+            protypeExpr.ToString(),
             (view) => protypeGetter((TView)view), 
             (object context, object mdoel) => sourceGetter((IModel)mdoel).Select(x => (object)x)));
     }
