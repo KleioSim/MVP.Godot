@@ -332,4 +332,9 @@ internal class MVPCore
         view2Context[view] = context;
         view2Combine[view].IsDirty = true;
     }
+
+    internal static object GetContext(IView item)
+    {
+        return view2Context[item];
+    }
 }
